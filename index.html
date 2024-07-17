@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>烟花和生日快乐</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: black; }
+        canvas { display: block; }
+        @import url('https://fonts.googleapis.com/css2?family=Pacifico&display=swap');
+    </style>
+</head>
+<body>
+    <canvas id="fireworksCanvas"></canvas>
+    <script>
+        const canvas = document.getElementById('fireworksCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        class LineParticle {
+            constructor(x, y, angle, speed, color) {
+                this.x = x;
+                this.y = y;
+                this.angle = angle;
+                this.speed = speed;
+                this.color = color;
+                this.length = Math.random() * 20 + 10;
+                this.life = 100;
+            }
+
+            update() {
+                this.x += Math.cos(this.angle) * this.speed;
+                this.y += Math.sin(this.angle) * this.speed;
+                this.life--;
+            }
+
+            draw() {
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(this.x + Math.cos(this.angle) * this.length, this.y + Math.sin(this.angle) * this.length);
+                ctx.stroke();
+            }
+        }
+
+        let particles = [];
+        let stars = [];
+        let showMessageFlag = false;
+        let messageAlpha = 0;
+        let messageFadeIn = true;
+        let message = "生日快乐";
+        let secondMessageFlag = false;
+
+        function createFireworks(x, y) {
+            const colors = ['hsl(0, 100%, 50%)', 'hsl(60, 100%, 50%)', 'hsl(120, 100%, 50%)', 'hsl(180, 100%, 50%)', 'hsl(240, 100%, 50%)', 'hsl(300, 100%, 50%)'];
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            for (let i = 0; i < 50; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 2 + 1; // 减慢速度
+                particles.push(new LineParticle(x, y, angle, speed, color));
+            }
+        }
+
+        function createHeartFireworks(x, y) {
+            const heartCoords = [];
+            for (let t = 0; t < Math.PI * 2; t += 0.05) {
+                const heartX = 16 * Math.pow(Math.sin(t), 3);
+                const heartY = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+                heartCoords.push({ x: heartX, y: heartY });
+            }
+            const scaleFactor = 15;
+            heartCoords.forEach(coord => {
+                const screenX = x + coord.x * scaleFactor;
+                const screenY = y - coord.y * scaleFactor;
+                createFireworks(screenX, screenY);
+            });
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (!showMessageFlag) {
+                particles = particles.filter(p => p.life > 0); // 过滤掉生命周期结束的粒子
+                for (let i = 0; i < particles.length; i++) {
+                    particles[i].update();
+                    particles[i].draw();
+                }
+            } else {
+                drawStars();
+                showMessage();
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        function triggerFireworks() {
+            if (!showMessageFlag) {
+                for (let i = 0; i < 10; i++) {
+                    const x = Math.random() * canvas.width;
+                    const y = Math.random() * canvas.height * 0.5;
+                    createFireworks(x, y);
+                }
+                setTimeout(triggerFireworks, 2000);  // 每2秒生成一次烟花
+            }
+        }
+
+        canvas.addEventListener('click', (e) => {
+            triggerFireworks();
+            setTimeout(() => { 
+                showMessageFlag = true; 
+                createStars();
+                setTimeout(() => {
+                    secondMessageFlag = true;
+                    message = "祝嘉嘉天天开心，学业有成(ง•̀_•́)ง";
+                    createHeartFireworks(canvas.width / 2, canvas.height / 2.5);
+                    changeStarColors();
+                    triggerSecondFireworks();
+                }, 5000); // 5秒后显示第二条信息并生成心形烟花
+            }, 4000);  // 4秒后显示文字并生成星星
+        });
+
+        function showMessage() {
+            ctx.font = "50px 'Pacifico'";
+            ctx.fillStyle = `rgba(255, 255, 0, ${messageAlpha})`; // 使用alpha通道
+            ctx.textAlign = "center";
+            ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
+            ctx.shadowOffsetX = 3;
+            ctx.shadowOffsetY = 3;
+            ctx.shadowBlur = 10;
+            ctx.fillText(message, canvas.width / 2, canvas.height / 2);
+
+            if (messageFadeIn) {
+                messageAlpha += 0.02;
+                if (messageAlpha >= 1) {
+                    messageAlpha = 1;
+                    messageFadeIn = false;
+                }
+            } else {
+                messageAlpha -= 0.02;
+                if (messageAlpha <= 0) {
+                    messageAlpha = 0;
+                    messageFadeIn = true;
+                }
+            }
+        }
+
+        function createStars() {
+            stars = [];
+            for (let i = 0; i < 100; i++) {
+                stars.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: Math.random() * 3 + 1,
+                    twinkle: Math.random() < 0.5,
+                    color: "white"
+                });
+            }
+            setInterval(() => {
+                for (let star of stars) {
+                    star.twinkle = !star.twinkle;
+                }
+            }, 500); // 每0.5秒闪烁一次
+        }
+
+        function changeStarColors() {
+            for (let star of stars) {
+                star.color = Math.random() < 0.5 ? "red" : "blue";
+            }
+        }
+
+        function drawStars() {
+            for (let star of stars) {
+                ctx.fillStyle = star.twinkle ? star.color : "black";
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function triggerSecondFireworks() {
+            for (let i = 0; i < 10; i++) {
+                const x = Math.random() * canvas.width;
+                const y = Math.random() * canvas.height * 0.5;
+                createFireworks(x, y);
+            }
+            setTimeout(triggerSecondFireworks, 2000);  // 每2秒生成一次烟花
+        }
+
+        animate();
+    </script>
+</body>
+</html>
